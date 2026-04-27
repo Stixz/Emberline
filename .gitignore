@@ -1,0 +1,18 @@
+# Ravenforge / Electron Projects
+# Ignore generated output and platform-specific binaries
+
+node_modules/
+dist/
+build/
+
+# Optional extras you probably don’t want in the repo
+*.log
+.DS_Store
+Thumbs.db
+
+# Electron packaging artifacts
+*.asar
+*.exe
+*.dmg
+*.app
+
