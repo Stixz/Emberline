@@ -14,3 +14,4 @@ A tool should get out of your way and let you work.
 
 ## License
 MIT — use it, remix it, build on it. Just keep the maker’s mark.
+

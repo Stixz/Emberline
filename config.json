@@ -1,0 +1,97 @@
+{
+  "apps": [
+    {
+      "name": "Gmail",
+      "url": "https://mail.google.com",
+      "icon": "📧",
+      "description": "Email & messaging",
+      "category": "Core Workspace"
+    },
+    {
+      "name": "Docs",
+      "url": "https://docs.google.com",
+      "icon": "📝",
+      "description": "Documents & writing",
+      "category": "Core Workspace"
+    },
+    {
+      "name": "Sheets",
+      "url": "https://sheets.google.com",
+      "icon": "📊",
+      "description": "Spreadsheets & data",
+      "category": "Core Workspace"
+    },
+    {
+      "name": "Slides",
+      "url": "https://slides.google.com",
+      "icon": "🎨",
+      "description": "Presentations",
+      "category": "Core Workspace"
+    },
+    {
+      "name": "Forms",
+      "url": "https://forms.google.com",
+      "icon": "✅",
+      "description": "Surveys & forms",
+      "category": "Core Workspace"
+    },
+    {
+      "name": "Drive",
+      "url": "https://drive.google.com",
+      "icon": "☁️",
+      "description": "Cloud storage",
+      "category": "Core Workspace"
+    },
+    {
+      "name": "Meet",
+      "url": "https://meet.google.com",
+      "icon": "📞",
+      "description": "Video conferencing",
+      "category": "Collaboration & Organization"
+    },
+    {
+      "name": "Calendar",
+      "url": "https://calendar.google.com",
+      "icon": "📅",
+      "description": "Schedule & events",
+      "category": "Collaboration & Organization"
+    },
+    {
+      "name": "Contacts",
+      "url": "https://contacts.google.com",
+      "icon": "👥",
+      "description": "People & groups",
+      "category": "Collaboration & Organization"
+    },
+    {
+      "name": "Keep",
+      "url": "https://keep.google.com",
+      "icon": "📌",
+      "description": "Notes & lists",
+      "category": "Collaboration & Organization"
+    },
+    {
+      "name": "Tasks",
+      "url": "https://tasks.google.com",
+      "icon": "✔️",
+      "description": "Task management",
+      "category": "Collaboration & Organization"
+    },
+    {
+      "name": "Photos",
+      "url": "https://photos.google.com",
+      "icon": "🖼️",
+      "description": "Photo storage",
+      "category": "Collaboration & Organization"
+    }
+  ],
+  "theme": "dark",
+  "customColors": {
+    "primary": "#60a5fa",
+    "secondary": "#a78bfa",
+    "background": "#1e293b",
+    "surface": "#334155",
+    "text": "#e2e8f0",
+    "textSecondary": "#94a3b8"
+  }
+}

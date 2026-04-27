@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emberline Works : A Google gateway.</title>
+  <style id="dynamic-styles">
+    /* Base styles will be injected dynamically */
+  </style>
+</head>
+<body>
+  <div class="title-bar">
+    <div class="title-bar-drag">
+      <span class="title-bar-title">Emberline Works : A Google gateway.</span>
+    </div>
+    <div class="title-bar-controls">
+      <button class="title-bar-btn" id="btn-minimize">─</button>
+      <button class="title-bar-btn" id="btn-maximize">□</button>
+      <button class="title-bar-btn title-bar-btn-close" id="btn-close">✕</button>
+    </div>
+  </div>
+  <div class="container">
+    <header>
+      <div class="header-controls">
+        <button id="settings-btn" class="settings-btn">⚙️ Settings</button>
+      </div>
+    </header>
+
+    <div id="main-content">
+      <!-- Apps will be dynamically generated here -->
+    </div>
+
+    <footer>
+      <p>© 2025 Ravenforge Creations Studio</p>
+    </footer>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Settings</h2>
+        <span class="close">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="settings-section">
+          <h3>Theme</h3>
+          <select id="theme-select">
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+            <option value="ocean">Ocean</option>
+            <option value="sunset">Sunset</option>
+            <option value="forest">Forest</option>
+            <option value="neon">Neon</option>
+            <option value="rose">Rose</option>
+            <option value="midnight">Midnight</option>
+            <option value="cyberpunk">Cyberpunk</option>
+            <option value="retro">Retro Terminal</option>
+            <option value="nord">Nord</option>
+            <option value="dracula">Dracula</option>
+            <option value="solarized">Solarized</option>
+            <option value="glass">Glass</option>
+            <option value="lavender">Lavender</option>
+            <option value="coffee">Coffee</option>
+            <option value="arctic">Arctic</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+
+        <div class="settings-section" id="custom-colors" style="display: none;">
+          <h3>Custom Colors</h3>
+          <div class="color-picker">
+            <label>Primary: <input type="color" id="primary-color"></label>
+            <label>Secondary: <input type="color" id="secondary-color"></label>
+            <label>Background: <input type="color" id="background-color"></label>
+            <label>Surface: <input type="color" id="surface-color"></label>
+            <label>Text: <input type="color" id="text-color"></label>
+            <label>Text Secondary: <input type="color" id="text-secondary-color"></label>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>Apps</h3>
+          <button id="add-app-btn" class="add-btn">+ Add App</button>
+          <div id="settings-status" class="status-banner" hidden></div>
+          <div id="apps-list">
+            <!-- Apps will be listed here for editing -->
+          </div>
+          <div id="app-editor" class="app-editor" hidden>
+            <h4 id="app-form-title">Add New App</h4>
+            <form id="add-app-form">
+              <label>Name: <input type="text" id="app-name" required></label>
+              <label>URL: <input type="url" id="app-url" required></label>
+              <label>Icon: <input type="text" id="app-icon" placeholder="📱" required></label>
+              <label>Description: <input type="text" id="app-description" required></label>
+              <label>Category:
+                <select id="app-category-select" required>
+                  <option value="" disabled selected>Select a category…</option>
+                  <option value="__new__">＋ New Category…</option>
+                </select>
+              </label>
+              <label id="app-category-new-label" style="display:none">New Category Name:
+                <input type="text" id="app-category-new" placeholder="e.g. Core Workspace">
+              </label>
+              <div class="app-editor-actions">
+                <button id="save-app" type="submit" class="save-btn">Add App</button>
+                <button id="cancel-app" type="button" class="cancel-btn">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="save-settings" class="save-btn">Save Changes</button>
+        <button id="cancel-settings" class="cancel-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let config = null;
+    let originalConfig = null;
+    let editingAppIndex = null;
+    let pendingDeleteIndex = null;
+
+    function createDefaultConfig() {
+      return {
+        apps: [],
+        theme: 'dark',
+        customColors: {
+          primary: '#60a5fa',
+          secondary: '#a78bfa',
+          background: '#1e293b',
+          surface: '#334155',
+          text: '#e2e8f0',
+          textSecondary: '#94a3b8'
+        }
+      };
+    }
+
+    function normalizeConfig(inputConfig) {
+      const base = createDefaultConfig();
+      const safeConfig = inputConfig && typeof inputConfig === 'object' ? inputConfig : {};
+
+      const apps = Array.isArray(safeConfig.apps) ? safeConfig.apps : [];
+
+      return {
+        apps: apps
+          .filter((item) => item && typeof item === 'object')
+          .map((item) => ({
+            name: typeof item.name === 'string' ? item.name.trim() : '',
+            url: typeof item.url === 'string' ? item.url.trim() : '',
+            icon: typeof item.icon === 'string' ? item.icon.trim() : '',
+            description: typeof item.description === 'string' ? item.description.trim() : '',
+            category: typeof item.category === 'string' ? item.category.trim() : ''
+          }))
+          .filter((item) => item.name && item.url && item.icon && item.description && item.category),
+        theme: ['dark', 'light', 'ocean', 'sunset', 'forest', 'neon', 'rose', 'midnight', 'cyberpunk', 'retro', 'nord', 'dracula', 'solarized', 'glass', 'lavender', 'coffee', 'arctic', 'custom'].includes(safeConfig.theme) ? safeConfig.theme : base.theme,
+        customColors: {
+          ...base.customColors,
+          ...(safeConfig.customColors || {})
+        }
+      };
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function setModalOpen(modalId, isOpen) {
+      const modal = document.getElementById(modalId);
+      if (!modal) {
+        return;
+      }
+
+      modal.classList.toggle('open', isOpen);
+      document.body.style.overflow = document.querySelector('.modal.open') ? 'hidden' : '';
+    }
+
+    function setAppEditorOpen(isOpen) {
+      const editor = document.getElementById('app-editor');
+      editor.hidden = !isOpen;
+
+      if (isOpen) {
+        requestAnimationFrame(() => {
+          document.getElementById('app-name').focus();
+        });
+      }
+    }
+
+    function showStatus(message, type = 'info') {
+      const status = document.getElementById('settings-status');
+      status.textContent = message;
+      status.className = `status-banner ${type}`;
+      status.hidden = false;
+    }
+
+    function clearStatus() {
+      const status = document.getElementById('settings-status');
+      status.hidden = true;
+      status.textContent = '';
+      status.className = 'status-banner';
+    }
+
+    function getAppFormData() {
+      const sel = document.getElementById('app-category-select');
+      const category = sel.value === '__new__'
+        ? document.getElementById('app-category-new').value.trim()
+        : sel.value;
+      return {
+        name: document.getElementById('app-name').value.trim(),
+        url: document.getElementById('app-url').value.trim(),
+        icon: document.getElementById('app-icon').value.trim(),
+        description: document.getElementById('app-description').value.trim(),
+        category
+      };
+    }
+
+    function isValidHttpUrl(value) {
+      try {
+        const parsedUrl = new URL(value);
+        return ['http:', 'https:'].includes(parsedUrl.protocol);
+      } catch (error) {
+        return false;
+      }
+    }
+
+    function validateAppData(appData) {
+      if (!appData.name || !appData.url || !appData.icon || !appData.description || !appData.category) {
+        return 'All app fields are required.';
+      }
+
+      if (!isValidHttpUrl(appData.url)) {
+        return 'App URL must start with http:// or https://.';
+      }
+
+      return null;
+    }
+
+    function resetAppForm() {
+      editingAppIndex = null;
+      document.getElementById('add-app-form').reset();
+      document.getElementById('app-form-title').textContent = 'Add New App';
+      document.getElementById('save-app').textContent = 'Add App';
+      populateCategoryDropdown();
+    }
+
+    function populateAppForm(app) {
+      document.getElementById('app-name').value = app.name;
+      document.getElementById('app-url').value = app.url;
+      document.getElementById('app-icon').value = app.icon;
+      document.getElementById('app-description').value = app.description;
+      populateCategoryDropdown(app.category);
+    }
+
+    function populateCategoryDropdown(selectedCategory) {
+      const sel = document.getElementById('app-category-select');
+      const apps = Array.isArray(config.apps) ? config.apps : [];
+      const cats = [...new Set(apps.map(a => a.category).filter(Boolean))].sort();
+
+      let html = '<option value="" disabled>Select a category…</option>';
+      cats.forEach(cat => {
+        const selected = cat === selectedCategory ? ' selected' : '';
+        html += `<option value="${escapeHtml(cat)}"${selected}>${escapeHtml(cat)}</option>`;
+      });
+      html += '<option value="__new__">＋ New Category…</option>';
+      sel.innerHTML = html;
+
+      const newLabel = document.getElementById('app-category-new-label');
+      const newInput = document.getElementById('app-category-new');
+
+      if (selectedCategory && !cats.includes(selectedCategory)) {
+        // Not in list yet — show as new category with value pre-filled
+        sel.value = '__new__';
+        newLabel.style.display = '';
+        newInput.value = selectedCategory;
+      } else {
+        newLabel.style.display = 'none';
+        newInput.value = '';
+      }
+    }
+
+    // Load config and initialize
+    async function loadConfig() {
+      const loadedConfig = await window.electronAPI.getConfig();
+      config = normalizeConfig(loadedConfig);
+      originalConfig = JSON.parse(JSON.stringify(config)); // Deep copy
+      applyTheme();
+      renderApps();
+    }
+
+    // Apply theme styles
+    function applyTheme() {
+      const themes = {
+        dark: {
+          primary: '#60a5fa',
+          secondary: '#a78bfa',
+          background: '#1e293b',
+          surface: '#334155',
+          text: '#e2e8f0',
+          textSecondary: '#94a3b8'
+        },
+        light: {
+          primary: '#3b82f6',
+          secondary: '#8b5cf6',
+          background: '#f8fafc',
+          surface: '#ffffff',
+          text: '#1e293b',
+          textSecondary: '#64748b'
+        },
+        ocean: {
+          primary: '#22d3ee',
+          secondary: '#06b6d4',
+          background: '#0c4a6e',
+          surface: '#164e63',
+          text: '#cffafe',
+          textSecondary: '#67e8f9'
+        },
+        sunset: {
+          primary: '#fb923c',
+          secondary: '#f97316',
+          background: '#431407',
+          surface: '#7c2d12',
+          text: '#fed7aa',
+          textSecondary: '#fdba74'
+        },
+        forest: {
+          primary: '#4ade80',
+          secondary: '#22c55e',
+          background: '#14532d',
+          surface: '#166534',
+          text: '#dcfce7',
+          textSecondary: '#86efac'
+        },
+        neon: {
+          primary: '#f0abfc',
+          secondary: '#e879f9',
+          background: '#0a0a0a',
+          surface: '#1a1a2e',
+          text: '#f5f5f5',
+          textSecondary: '#c084fc'
+        },
+        rose: {
+          primary: '#fb7185',
+          secondary: '#f43f5e',
+          background: '#4c0519',
+          surface: '#881337',
+          text: '#ffe4e6',
+          textSecondary: '#fda4af'
+        },
+        midnight: {
+          primary: '#818cf8',
+          secondary: '#6366f1',
+          background: '#0f0f23',
+          surface: '#1a1a3e',
+          text: '#e0e7ff',
+          textSecondary: '#a5b4fc'
+        },
+        cyberpunk: {
+          primary: '#facc15',
+          secondary: '#f59e0b',
+          background: '#0a0a0a',
+          surface: '#1c1917',
+          text: '#fef08a',
+          textSecondary: '#fbbf24'
+        },
+        retro: {
+          primary: '#4ade80',
+          secondary: '#22c55e',
+          background: '#0a0a0a',
+          surface: '#111111',
+          text: '#4ade80',
+          textSecondary: '#166534'
+        },
+        nord: {
+          primary: '#88c0d0',
+          secondary: '#81a1c1',
+          background: '#2e3440',
+          surface: '#3b4252',
+          text: '#eceff4',
+          textSecondary: '#d8dee9'
+        },
+        dracula: {
+          primary: '#bd93f9',
+          secondary: '#ff79c6',
+          background: '#282a36',
+          surface: '#44475a',
+          text: '#f8f8f2',
+          textSecondary: '#6272a4'
+        },
+        solarized: {
+          primary: '#268bd2',
+          secondary: '#2aa198',
+          background: '#002b36',
+          surface: '#073642',
+          text: '#839496',
+          textSecondary: '#586e75'
+        },
+        glass: {
+          primary: '#93c5fd',
+          secondary: '#c4b5fd',
+          background: '#1e293b',
+          surface: 'rgba(51, 65, 85, 0.6)',
+          text: '#e2e8f0',
+          textSecondary: '#94a3b8'
+        },
+        lavender: {
+          primary: '#c4b5fd',
+          secondary: '#a78bfa',
+          background: '#2e1065',
+          surface: '#3b0764',
+          text: '#ede9fe',
+          textSecondary: '#c4b5fd'
+        },
+        coffee: {
+          primary: '#d97706',
+          secondary: '#b45309',
+          background: '#292018',
+          surface: '#3b2a1a',
+          text: '#fde68a',
+          textSecondary: '#a16207'
+        },
+        arctic: {
+          primary: '#e0f2fe',
+          secondary: '#bae6fd',
+          background: '#0c4a6e',
+          surface: '#075985',
+          text: '#f0f9ff',
+          textSecondary: '#7dd3fc'
+        },
+        custom: config.customColors
+      };
+
+      const colors = themes[config.theme] || themes.dark;
+
+      const css = `
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+          background: linear-gradient(135deg, ${colors.background} 0%, ${colors.surface} 100%);
+          color: ${colors.text};
+          min-height: 100vh;
+          padding: 36px 0 44px 0;
+          overflow-x: hidden;
+        }
+
+        .title-bar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          height: 36px;
+          background: ${colors.background};
+          -webkit-app-region: drag;
+          app-region: drag;
+          user-select: none;
+          padding-left: 12px;
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          z-index: 9999;
+        }
+
+        .title-bar-drag {
+          flex: 1;
+          display: flex;
+          align-items: center;
+        }
+
+        .title-bar-title {
+          font-size: 0.8em;
+          font-weight: 600;
+          color: ${colors.textSecondary};
+        }
+
+        .title-bar-controls {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding-right: 10px;
+          -webkit-app-region: no-drag;
+          app-region: no-drag;
+        }
+
+        .title-bar-btn {
+          width: 28px;
+          height: 28px;
+          border: none;
+          border-radius: 9999px;
+          background: ${colors.surface};
+          color: ${colors.textSecondary};
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 0.75em;
+          transition: all 0.2s ease;
+        }
+
+        .title-bar-btn:hover {
+          background: ${colors.primary};
+          color: white;
+        }
+
+        .title-bar-btn-close:hover {
+          background: #ef4444;
+          color: white;
+        }
+
+        .container {
+          max-width: 1000px;
+          margin: 0 auto;
+          padding: 16px 30px;
+        }
+
+        header {
+          margin-bottom: 20px;
+          text-align: right;
+          position: sticky;
+          top: 0;
+          z-index: 100;
+          padding: 8px 0;
+        }
+
+        h1 {
+          font-size: 2.5em;
+          font-weight: 700;
+          margin-bottom: 10px;
+          background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .subtitle {
+          font-size: 1em;
+          color: ${colors.textSecondary};
+          font-weight: 400;
+        }
+
+        .header-controls {
+          display: flex;
+          justify-content: flex-end;
+        }
+
+        .settings-btn {
+          background: ${colors.surface};
+          border: 1px solid ${colors.textSecondary};
+          color: ${colors.text};
+          padding: 8px 18px;
+          border-radius: 9999px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+
+        .settings-btn:hover {
+          background: ${colors.primary};
+          color: white;
+        }
+
+        .apps-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 20px;
+          margin-top: 40px;
+        }
+
+        .app-card {
+          background: linear-gradient(135deg, ${colors.surface} 0%, ${colors.background} 100%);
+          border: none;
+          border-radius: 16px;
+          padding: 25px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          text-decoration: none;
+          color: inherit;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .app-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+          transition: left 0.4s ease;
+        }
+
+        .app-card:hover::before {
+          left: 100%;
+        }
+
+        .app-card:hover {
+          transform: translateY(-8px);
+          box-shadow: 0 12px 24px rgba(96, 165, 250, 0.2);
+          background: linear-gradient(135deg, ${colors.background} 0%, ${colors.surface} 100%);
+        }
+
+        .app-icon {
+          font-size: 3.5em;
+          margin-bottom: 15px;
+          display: block;
+          transition: transform 0.3s ease;
+        }
+
+        .app-card:hover .app-icon {
+          transform: scale(1.1);
+        }
+
+        .app-name {
+          font-size: 1.1em;
+          font-weight: 600;
+          margin-bottom: 8px;
+          color: ${colors.text};
+        }
+
+        .app-description {
+          font-size: 0.85em;
+          color: ${colors.textSecondary};
+          line-height: 1.4;
+        }
+
+        .section-title {
+          font-size: 1.3em;
+          font-weight: 600;
+          color: ${colors.text};
+          margin-top: 40px;
+          margin-bottom: 20px;
+          padding-bottom: 10px;
+          border-bottom: none;
+        }
+
+        footer {
+          text-align: center;
+          padding: 12px;
+          border-top: none;
+          color: ${colors.textSecondary};
+          font-size: 0.9em;
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          background: ${colors.background};
+          z-index: 9999;
+        }
+
+        /* Modal styles */
+        .modal {
+          display: none;
+          position: fixed;
+          z-index: 1000;
+          left: 0;
+          top: 0;
+          width: 100%;
+          height: 100%;
+          background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal.open {
+          display: block;
+        }
+
+        .modal-content {
+          background-color: ${colors.surface};
+          margin: 5% auto;
+          padding: 0;
+          border: 1px solid ${colors.textSecondary};
+          border-radius: 12px;
+          width: 90%;
+          max-width: 600px;
+          color: ${colors.text};
+          max-height: 80vh;
+          overflow-y: auto;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+
+        .modal-content::-webkit-scrollbar {
+          display: none;
+        }
+
+        .modal-header {
+          padding: 20px;
+          border-bottom: 1px solid ${colors.textSecondary};
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .modal-header h2 {
+          margin: 0;
+          color: ${colors.text};
+        }
+
+        .close {
+          color: ${colors.textSecondary};
+          font-size: 28px;
+          font-weight: bold;
+          cursor: pointer;
+        }
+
+        .close:hover {
+          color: ${colors.primary};
+        }
+
+        .modal-body {
+          padding: 20px;
+        }
+
+        .modal-footer {
+          padding: 20px;
+          border-top: 1px solid ${colors.textSecondary};
+          text-align: right;
+        }
+
+        .settings-section {
+          margin-bottom: 20px;
+        }
+
+        .settings-section h3 {
+          margin-bottom: 10px;
+          color: ${colors.text};
+        }
+
+        select, input[type="text"], input[type="url"] {
+          width: 100%;
+          padding: 8px;
+          border: 1px solid ${colors.textSecondary};
+          border-radius: 4px;
+          background: ${colors.background};
+          color: ${colors.text};
+          margin-bottom: 10px;
+        }
+
+        .color-picker {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 10px;
+        }
+
+        .color-picker label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .add-btn, .save-btn, .cancel-btn {
+          padding: 8px 18px;
+          border: none;
+          border-radius: 9999px;
+          cursor: pointer;
+          margin-right: 10px;
+        }
+
+        .add-btn {
+          background: ${colors.primary};
+          color: white;
+        }
+
+        .save-btn {
+          background: ${colors.primary};
+          color: white;
+        }
+
+        .cancel-btn {
+          background: ${colors.textSecondary};
+          color: ${colors.surface};
+        }
+
+        .app-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 10px;
+          border: 1px solid ${colors.textSecondary};
+          border-radius: 4px;
+          margin-bottom: 10px;
+          background: ${colors.background};
+        }
+
+        .app-item-info {
+          flex-grow: 1;
+        }
+
+        .app-item-actions {
+          display: flex;
+          gap: 5px;
+        }
+
+        .edit-btn, .delete-btn {
+          padding: 4px 12px;
+          border: none;
+          border-radius: 9999px;
+          cursor: pointer;
+          font-size: 0.8em;
+        }
+
+        .edit-btn {
+          background: ${colors.secondary};
+          color: white;
+        }
+
+        .delete-btn {
+          background: #ef4444;
+          color: white;
+        }
+
+        .app-editor {
+          margin-top: 16px;
+          padding: 16px;
+          border: 1px solid ${colors.textSecondary};
+          border-radius: 8px;
+          background: ${colors.surface};
+        }
+
+        .app-editor h4 {
+          margin-bottom: 12px;
+          color: ${colors.text};
+        }
+
+        .app-editor-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          margin-top: 8px;
+        }
+
+        .status-banner {
+          margin: 12px 0;
+          padding: 10px 12px;
+          border-radius: 8px;
+          border: 1px solid ${colors.textSecondary};
+          background: ${colors.background};
+          color: ${colors.text};
+          font-size: 0.9em;
+        }
+
+        .status-banner.success {
+          border-color: #22c55e;
+          color: #bbf7d0;
+        }
+
+        .status-banner.error {
+          border-color: #ef4444;
+          color: #fecaca;
+        }
+
+        .status-banner.info {
+          border-color: ${colors.primary};
+          color: ${colors.text};
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+          .container {
+            padding: 20px;
+          }
+
+          h1 {
+            font-size: 2em;
+          }
+
+          .apps-grid {
+            grid-template-columns: 1fr;
+            gap: 15px;
+          }
+
+          .app-card {
+            padding: 20px;
+          }
+
+          .app-icon {
+            font-size: 3em;
+          }
+
+          .color-picker {
+            grid-template-columns: 1fr;
+          }
+        }
+      `;
+
+      document.getElementById('dynamic-styles').textContent = css;
+    }
+
+    // Render apps dynamically
+    function renderApps() {
+      const mainContent = document.getElementById('main-content');
+      const categories = {};
+      const apps = Array.isArray(config.apps) ? config.apps : [];
+
+      apps.forEach(app => {
+        if (!categories[app.category]) {
+          categories[app.category] = [];
+        }
+        categories[app.category].push(app);
+      });
+
+      let html = '';
+      for (const [category, apps] of Object.entries(categories)) {
+        html += `<section>
+          <h2 class="section-title">${escapeHtml(category)}</h2>
+          <div class="apps-grid">`;
+
+        apps.forEach(app => {
+        html += `
+        <div class="app-card" data-app-url="${escapeHtml(app.url)}">
+        ${app.icon.startsWith('http') ? `<img class="app-icon" src="${escapeHtml(app.icon)}" alt="${escapeHtml(app.name)} icon" />` : `<span class="app-icon">${escapeHtml(app.icon)}</span>`}
+        <div class="app-name">${escapeHtml(app.name)}</div>
+        <div class="app-description">${escapeHtml(app.description)}</div>
+        </div>`;
+    });
+
+        html += `</div></section>`;
+      }
+
+      mainContent.innerHTML = html;
+    }
+
+    // Settings modal functionality
+    function openSettings() {
+      clearStatus();
+      document.getElementById('theme-select').value = config.theme;
+      document.getElementById('custom-colors').style.display = config.theme === 'custom' ? 'block' : 'none';
+
+      if (config.customColors) {
+        document.getElementById('primary-color').value = config.customColors.primary;
+        document.getElementById('secondary-color').value = config.customColors.secondary;
+        document.getElementById('background-color').value = config.customColors.background;
+        document.getElementById('surface-color').value = config.customColors.surface;
+        document.getElementById('text-color').value = config.customColors.text;
+        document.getElementById('text-secondary-color').value = config.customColors.textSecondary;
+      }
+
+      renderAppsList();
+      setModalOpen('settings-modal', true);
+    }
+
+    function closeSettings() {
+      config = JSON.parse(JSON.stringify(originalConfig)); // Reset changes
+      closeAddAppModal();
+      pendingDeleteIndex = null;
+      clearStatus();
+      setModalOpen('settings-modal', false);
+    }
+
+    function renderAppsList() {
+      const appsList = document.getElementById('apps-list');
+      let html = '';
+      const apps = Array.isArray(config.apps) ? config.apps : [];
+
+      apps.forEach((app, index) => {
+        const isPendingDelete = pendingDeleteIndex === index;
+        html += `
+          <div class="app-item">
+            <div class="app-item-info">
+              <strong>${escapeHtml(app.name)}</strong> - ${escapeHtml(app.category)}
+            </div>
+            <div class="app-item-actions">
+              <button class="edit-btn" type="button" data-action="edit" data-index="${index}">Edit</button>
+              ${isPendingDelete
+                ? `<button class="delete-btn" type="button" data-action="confirm-delete" data-index="${index}">Confirm</button>
+              <button class="cancel-btn" type="button" data-action="cancel-delete" data-index="${index}">Cancel</button>`
+                : `<button class="delete-btn" type="button" data-action="delete" data-index="${index}">Delete</button>`}
+            </div>
+          </div>`;
+      });
+
+      appsList.innerHTML = html;
+    }
+
+    async function saveSettings() {
+    config = normalizeConfig(config);
+
+    // Update theme
+    config.theme = document.getElementById('theme-select').value;
+
+    // Update custom colors if custom theme
+    if (config.theme === 'custom') {
+        config.customColors = {
+        primary: document.getElementById('primary-color').value,
+        secondary: document.getElementById('secondary-color').value,
+        background: document.getElementById('background-color').value,
+        surface: document.getElementById('surface-color').value,
+        text: document.getElementById('text-color').value,
+        textSecondary: document.getElementById('text-secondary-color').value
+        };
+    }
+
+    // Validate all apps before saving
+    for (const app of config.apps) {
+        if (!app.name || !app.url || !app.icon || !app.description || !app.category) {
+        showStatus('All saved apps must include name, URL, icon, description, and category.', 'error');
+        return;
+        }
+    }
+
+    const result = await window.electronAPI.saveConfig(config);
+    if (result && result.ok) {
+        config = normalizeConfig(result.config);
+        originalConfig = JSON.parse(JSON.stringify(config));
+        applyTheme();
+        renderApps();
+      closeAddAppModal();
+      clearStatus();
+      setModalOpen('settings-modal', false);
+    } else {
+        showStatus(result && result.error ? result.error : 'Failed to save settings.', 'error');
+    }
+    }
+
+    function openAddAppModal() {
+    pendingDeleteIndex = null;
+    renderAppsList();
+    resetAppForm();
+    clearStatus();
+    setAppEditorOpen(true);
+    }
+
+    function closeAddAppModal() {
+    setAppEditorOpen(false);
+    resetAppForm();
+    }
+
+    function saveAppForm() {
+    config = normalizeConfig(config);
+
+    const appData = getAppFormData();
+    const validationError = validateAppData(appData);
+    if (validationError) {
+      showStatus(validationError, 'error');
+      return;
+    }
+
+    if (editingAppIndex === null) {
+      config.apps.push(appData);
+      showStatus(`Added ${appData.name}. Save Changes to keep it.`, 'success');
+    } else if (editingAppIndex >= 0 && editingAppIndex < config.apps.length) {
+      config.apps[editingAppIndex] = appData;
+      showStatus(`Updated ${appData.name}. Save Changes to keep it.`, 'success');
+    } else {
+      showStatus('Unable to save app. Reopen the app editor and try again.', 'error');
+      return;
+    }
+
+    renderAppsList();
+    closeAddAppModal();
+   }
+
+    function deleteApp(index) {
+     config = normalizeConfig(config);
+
+     if (index < 0 || index >= config.apps.length) {
+       return;
+     }
+
+     pendingDeleteIndex = index;
+     showStatus(`Confirm removal of ${config.apps[index].name}.`, 'info');
+     renderAppsList();
+ }
+
+    function confirmDeleteApp(index) {
+     config = normalizeConfig(config);
+
+     if (index < 0 || index >= config.apps.length) {
+       pendingDeleteIndex = null;
+       showStatus('The selected app no longer exists.', 'error');
+       renderAppsList();
+       return;
+    }
+
+     const deletedAppName = config.apps[index].name;
+     config.apps.splice(index, 1);
+     if (editingAppIndex === index) {
+       closeAddAppModal();
+     } else if (editingAppIndex !== null && index < editingAppIndex) {
+       editingAppIndex -= 1;
+     }
+
+     pendingDeleteIndex = null;
+     showStatus(`Removed ${deletedAppName}. Save Changes to keep it.`, 'success');
+     renderAppsList();
+ }
+
+    function cancelDeleteApp() {
+      pendingDeleteIndex = null;
+      clearStatus();
+      renderAppsList();
+    }
+
+    function editApp(index) {
+      config = normalizeConfig(config);
+      const target = config.apps[index];
+      if (!target) {
+        return;
+      }
+
+      pendingDeleteIndex = null;
+      editingAppIndex = index;
+      document.getElementById('app-form-title').textContent = 'Edit App';
+      document.getElementById('save-app').textContent = 'Save App';
+      populateAppForm(target);
+      clearStatus();
+      setAppEditorOpen(true);
+    }
+
+    // Event listeners
+    document.addEventListener('DOMContentLoaded', loadConfig);
+
+    document.getElementById('btn-minimize').addEventListener('click', () => window.electronAPI.minimizeWindow());
+    document.getElementById('btn-maximize').addEventListener('click', () => window.electronAPI.maximizeWindow());
+    document.getElementById('btn-close').addEventListener('click', () => window.electronAPI.closeWindow());
+
+    document.getElementById('settings-btn').addEventListener('click', openSettings);
+    document.querySelectorAll('.close').forEach(closeBtn => {
+      closeBtn.addEventListener('click', function() {
+        const modal = this.closest('.modal');
+        setModalOpen(modal.id, false);
+      });
+    });
+
+    document.getElementById('theme-select').addEventListener('change', function() {
+      document.getElementById('custom-colors').style.display = this.value === 'custom' ? 'block' : 'none';
+    });
+
+    document.getElementById('save-settings').addEventListener('click', saveSettings);
+    document.getElementById('cancel-settings').addEventListener('click', closeSettings);
+    document.getElementById('add-app-btn').addEventListener('click', openAddAppModal);
+    document.getElementById('cancel-app').addEventListener('click', closeAddAppModal);
+    document.getElementById('app-category-select').addEventListener('change', function() {
+      const newLabel = document.getElementById('app-category-new-label');
+      const newInput = document.getElementById('app-category-new');
+      if (this.value === '__new__') {
+        newLabel.style.display = '';
+        newInput.value = '';
+        newInput.focus();
+      } else {
+        newLabel.style.display = 'none';
+        newInput.value = '';
+      }
+    });
+
+    document.getElementById('add-app-form').addEventListener('submit', function(event) {
+      event.preventDefault();
+      saveAppForm();
+    });
+    document.getElementById('apps-list').addEventListener('click', function(event) {
+      const actionButton = event.target.closest('button[data-action]');
+      if (!actionButton) {
+        return;
+      }
+
+      const index = Number.parseInt(actionButton.dataset.index, 10);
+      if (Number.isNaN(index)) {
+        return;
+      }
+
+      if (actionButton.dataset.action === 'edit') {
+        editApp(index);
+      } else if (actionButton.dataset.action === 'delete') {
+        deleteApp(index);
+      } else if (actionButton.dataset.action === 'confirm-delete') {
+        confirmDeleteApp(index);
+      } else if (actionButton.dataset.action === 'cancel-delete') {
+        cancelDeleteApp();
+      }
+    });
+    document.getElementById('main-content').addEventListener('click', function(event) {
+      const appCard = event.target.closest('.app-card');
+      if (!appCard) {
+        return;
+      }
+
+      const url = appCard.dataset.appUrl;
+      if (url) {
+        openApp(url);
+      }
+    });
+
+    // Close modals when clicking outside
+    window.addEventListener('click', function(event) {
+      if (event.target.classList.contains('modal')) {
+        setModalOpen(event.target.id, false);
+      }
+    });
+
+    function openApp(url) {
+      window.electronAPI.openApp(url);
+    }
+  </script>
+</body>
+</html>
