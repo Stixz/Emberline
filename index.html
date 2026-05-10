@@ -230,6 +230,17 @@
       }
     }
 
+    function isGoogleAppUrl(url) {
+      try {
+        const parsedUrl = new URL(url);
+        const hostname = parsedUrl.hostname.toLowerCase();
+        // Allow any Google domain (google.com and subdomains)
+        return hostname === 'google.com' || hostname.endsWith('.google.com');
+      } catch {
+        return false;
+      }
+    }
+
     function validateAppData(appData) {
       if (!appData.name || !appData.url || !appData.icon || !appData.description || !appData.category) {
         return 'All app fields are required.';
@@ -237,6 +248,10 @@
 
       if (!isValidHttpUrl(appData.url)) {
         return 'App URL must start with http:// or https://.';
+      }
+
+      if (!isGoogleAppUrl(appData.url)) {
+        return 'Only Google app URLs are allowed (e.g., mail.google.com, docs.google.com).';
       }
 
       return null;

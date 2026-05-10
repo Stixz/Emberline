@@ -5,7 +5,7 @@ node_modules/
 dist/
 build/
 
-# Optional extras you probably don’t want in the repo
+# Optional extras you probably don't want in the repo
 *.log
 .DS_Store
 Thumbs.db
@@ -16,3 +16,12 @@ Thumbs.db
 *.dmg
 *.app
 
+# ESE database transaction logs (runtime artifacts, not source)
+edb.chk
+edb.log
+edbres00001.jrs
+edbres00002.jrs
+edbtmp.log
+
+# Scan output logs
+logs/

@@ -10,6 +10,36 @@ function getWindowIconPath() {
   return fs.existsSync(bundledIconPath) ? bundledIconPath : undefined;
 }
 
+function getWindowStateFilePath() {
+  return path.join(app.getPath('userData'), 'window-state.json');
+}
+
+function loadWindowState() {
+  try {
+    const stateFilePath = getWindowStateFilePath();
+    if (fs.existsSync(stateFilePath)) {
+      const state = JSON.parse(fs.readFileSync(stateFilePath, 'utf8'));
+      // Validate the bounds are reasonable before returning
+      if (state.bounds && typeof state.bounds === 'object') {
+        return state;
+      }
+    }
+  } catch (error) {
+    console.error('Error loading window state:', error);
+  }
+  return null;
+}
+
+function saveWindowState(bounds, isMaximized) {
+  try {
+    const stateFilePath = getWindowStateFilePath();
+    const state = { bounds, isMaximized };
+    fs.writeFileSync(stateFilePath, JSON.stringify(state, null, 2));
+  } catch (error) {
+    console.error('Error saving window state:', error);
+  }
+}
+
 function createDefaultConfig() {
   return {
     apps: [],
@@ -104,7 +134,8 @@ function saveConfig(config) {
 }
 
 function createMainWindow() {
-  mainWindow = new BrowserWindow({
+  const savedState = loadWindowState();
+  const windowOptions = {
     width: 900,
     height: 700,
     minWidth: 600,
@@ -117,10 +148,42 @@ function createMainWindow() {
       contextIsolation: true,
       enableRemoteModule: false
     }
-  });
+  };
+
+  // Apply saved bounds if available
+  if (savedState && savedState.bounds) {
+    windowOptions.x = savedState.bounds.x;
+    windowOptions.y = savedState.bounds.y;
+    windowOptions.width = savedState.bounds.width;
+    windowOptions.height = savedState.bounds.height;
+  }
+
+  mainWindow = new BrowserWindow(windowOptions);
+
+  // Restore maximized state if it was maximized before
+  if (savedState && savedState.isMaximized) {
+    mainWindow.maximize();
+  }
 
   mainWindow.loadFile('index.html');
   mainWindow.setMenuBarVisibility(false);
+
+  // Save window state when it moves, resizes, or closes
+  mainWindow.on('moved', () => {
+    saveWindowState(mainWindow.getBounds(), mainWindow.isMaximized());
+  });
+
+  mainWindow.on('resized', () => {
+    saveWindowState(mainWindow.getBounds(), mainWindow.isMaximized());
+  });
+
+  mainWindow.on('maximize', () => {
+    saveWindowState(mainWindow.getBounds(), true);
+  });
+
+  mainWindow.on('unmaximize', () => {
+    saveWindowState(mainWindow.getBounds(), false);
+  });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -183,13 +246,7 @@ function openAppWindow(url) {
   let appWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    frame: false,
-    titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#1e293b',
-      symbolColor: '#e2e8f0',
-      height: 36
-    },
+    frame: true,
     icon: getWindowIconPath(),
     webPreferences: {
       preload: path.join(__dirname, 'app-preload.js'),
