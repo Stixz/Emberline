@@ -82,6 +82,20 @@
         <div class="settings-section">
           <h3>Apps</h3>
           <button id="add-app-btn" class="add-btn">+ Add App</button>
+          <div class="quick-add-panel">
+            <div class="quick-add-actions">
+              <button id="quick-add-core" class="quick-add-btn" type="button">+ Core Pack</button>
+              <button id="quick-add-collab" class="quick-add-btn" type="button">+ Collaboration Pack</button>
+              <button id="quick-add-all" class="quick-add-btn" type="button">+ Full Google Pack</button>
+            </div>
+            <div class="quick-add-row">
+              <label for="quick-add-select">Quick Pick:</label>
+              <select id="quick-add-select">
+                <option value="">Select a Google app...</option>
+              </select>
+              <button id="quick-add-selected" class="save-btn" type="button">Add Selected</button>
+            </div>
+          </div>
           <div id="settings-status" class="status-banner" hidden></div>
           <div id="apps-list">
             <!-- Apps will be listed here for editing -->
@@ -121,7 +135,170 @@
     let config = null;
     let originalConfig = null;
     let editingAppIndex = null;
-    let pendingDeleteIndex = null;
+    const GOOGLE_APP_LIBRARY = [
+      {
+        id: 'gmail',
+        name: 'Gmail',
+        url: 'https://mail.google.com',
+        icon: '📧',
+        description: 'Email & messaging',
+        category: 'Core Workspace',
+        packs: ['core', 'all']
+      },
+      {
+        id: 'docs',
+        name: 'Docs',
+        url: 'https://docs.google.com',
+        icon: '📝',
+        description: 'Documents & writing',
+        category: 'Core Workspace',
+        packs: ['core', 'all']
+      },
+      {
+        id: 'sheets',
+        name: 'Sheets',
+        url: 'https://sheets.google.com',
+        icon: '📊',
+        description: 'Spreadsheets & data',
+        category: 'Core Workspace',
+        packs: ['core', 'all']
+      },
+      {
+        id: 'slides',
+        name: 'Slides',
+        url: 'https://slides.google.com',
+        icon: '🎨',
+        description: 'Presentations',
+        category: 'Core Workspace',
+        packs: ['core', 'all']
+      },
+      {
+        id: 'forms',
+        name: 'Forms',
+        url: 'https://forms.google.com',
+        icon: '✅',
+        description: 'Surveys & forms',
+        category: 'Core Workspace',
+        packs: ['core', 'all']
+      },
+      {
+        id: 'drive',
+        name: 'Drive',
+        url: 'https://drive.google.com',
+        icon: '☁️',
+        description: 'Cloud storage',
+        category: 'Core Workspace',
+        packs: ['core', 'all']
+      },
+      {
+        id: 'meet',
+        name: 'Meet',
+        url: 'https://meet.google.com',
+        icon: '📞',
+        description: 'Video conferencing',
+        category: 'Collaboration & Organization',
+        packs: ['collab', 'all']
+      },
+      {
+        id: 'calendar',
+        name: 'Calendar',
+        url: 'https://calendar.google.com',
+        icon: '📅',
+        description: 'Schedule & events',
+        category: 'Collaboration & Organization',
+        packs: ['collab', 'all']
+      },
+      {
+        id: 'contacts',
+        name: 'Contacts',
+        url: 'https://contacts.google.com',
+        icon: '👥',
+        description: 'People & groups',
+        category: 'Collaboration & Organization',
+        packs: ['collab', 'all']
+      },
+      {
+        id: 'keep',
+        name: 'Keep',
+        url: 'https://keep.google.com',
+        icon: '📌',
+        description: 'Notes & lists',
+        category: 'Collaboration & Organization',
+        packs: ['collab', 'all']
+      },
+      {
+        id: 'tasks',
+        name: 'Tasks',
+        url: 'https://tasks.google.com',
+        icon: '✔️',
+        description: 'Task management',
+        category: 'Collaboration & Organization',
+        packs: ['collab', 'all']
+      },
+      {
+        id: 'photos',
+        name: 'Photos',
+        url: 'https://photos.google.com',
+        icon: '🖼️',
+        description: 'Photo storage',
+        category: 'Collaboration & Organization',
+        packs: ['collab', 'all']
+      },
+      {
+        id: 'chat',
+        name: 'Chat',
+        url: 'https://chat.google.com',
+        icon: '💬',
+        description: 'Team messaging',
+        category: 'Communication',
+        packs: ['all']
+      },
+      {
+        id: 'classroom',
+        name: 'Classroom',
+        url: 'https://classroom.google.com',
+        icon: '🏫',
+        description: 'Classes & assignments',
+        category: 'Communication',
+        packs: ['all']
+      },
+      {
+        id: 'gemini',
+        name: 'Gemini',
+        url: 'https://gemini.google.com',
+        icon: '✨',
+        description: 'Google AI assistant',
+        category: 'Communication',
+        packs: ['all']
+      },
+      {
+        id: 'sites',
+        name: 'Sites',
+        url: 'https://sites.google.com',
+        icon: '🌐',
+        description: 'Website builder',
+        category: 'Build & Publish',
+        packs: ['all']
+      },
+      {
+        id: 'script',
+        name: 'Apps Script',
+        url: 'https://script.google.com',
+        icon: '⌨️',
+        description: 'Automation scripts',
+        category: 'Build & Publish',
+        packs: ['all']
+      },
+      {
+        id: 'myaccount',
+        name: 'Google Account',
+        url: 'https://myaccount.google.com',
+        icon: '🔐',
+        description: 'Security & profile',
+        category: 'Admin & Security',
+        packs: ['all']
+      }
+    ];
 
     function createDefaultConfig() {
       return {
@@ -152,7 +329,8 @@
             url: typeof item.url === 'string' ? item.url.trim() : '',
             icon: typeof item.icon === 'string' ? item.icon.trim() : '',
             description: typeof item.description === 'string' ? item.description.trim() : '',
-            category: typeof item.category === 'string' ? item.category.trim() : ''
+            category: typeof item.category === 'string' ? item.category.trim() : '',
+            hidden: Boolean(item.hidden)
           }))
           .filter((item) => item.name && item.url && item.icon && item.description && item.category),
         theme: ['dark', 'light', 'ocean', 'sunset', 'forest', 'neon', 'rose', 'midnight', 'cyberpunk', 'retro', 'nord', 'dracula', 'solarized', 'glass', 'lavender', 'coffee', 'arctic', 'custom'].includes(safeConfig.theme) ? safeConfig.theme : base.theme,
@@ -255,6 +433,118 @@
       }
 
       return null;
+    }
+
+    function getUrlKey(url) {
+      try {
+        const parsedUrl = new URL(url.trim());
+        const cleanPath = parsedUrl.pathname.replace(/\/+$/, '') || '/';
+        return `${parsedUrl.hostname.toLowerCase()}${cleanPath}${parsedUrl.search}`;
+      } catch {
+        return String(url || '').trim().toLowerCase();
+      }
+    }
+
+    function getLibraryAppById(appId) {
+      return GOOGLE_APP_LIBRARY.find((app) => app.id === appId) || null;
+    }
+
+    function renderQuickAddOptions() {
+      const quickAddSelect = document.getElementById('quick-add-select');
+      if (!quickAddSelect || !config) {
+        return;
+      }
+
+      const existingAppsByUrlKey = new Map(
+        (Array.isArray(config.apps) ? config.apps : []).map((app) => [getUrlKey(app.url), app])
+      );
+
+      let html = '<option value="">Select a Google app...</option>';
+      GOOGLE_APP_LIBRARY.forEach((app) => {
+        const existingApp = existingAppsByUrlKey.get(getUrlKey(app.url));
+        const alreadyActive = existingApp && !existingApp.hidden;
+        const isHidden = existingApp && existingApp.hidden;
+        const statusLabel = alreadyActive ? ' (active)' : (isHidden ? ' (hidden)' : '');
+
+        html += `<option value="${escapeHtml(app.id)}"${alreadyActive ? ' disabled' : ''}>${escapeHtml(app.name)}${statusLabel} - ${escapeHtml(app.category)}</option>`;
+      });
+
+      quickAddSelect.innerHTML = html;
+      quickAddSelect.value = '';
+    }
+
+    function addAppsFromLibrary(appsToAdd, sourceLabel) {
+      config = normalizeConfig(config);
+
+      if (!Array.isArray(appsToAdd) || appsToAdd.length === 0) {
+        showStatus('No apps were selected to add.', 'info');
+        return;
+      }
+
+      const existingAppIndexByUrlKey = new Map(
+        config.apps.map((app, index) => [getUrlKey(app.url), index])
+      );
+      let addedCount = 0;
+      let restoredCount = 0;
+      let skippedCount = 0;
+
+      appsToAdd.forEach((app) => {
+        const appData = {
+          name: app.name,
+          url: app.url,
+          icon: app.icon,
+          description: app.description,
+          category: app.category,
+          hidden: false
+        };
+
+        if (validateAppData(appData)) {
+          skippedCount += 1;
+          return;
+        }
+
+        const urlKey = getUrlKey(appData.url);
+        if (existingAppIndexByUrlKey.has(urlKey)) {
+          const existingIndex = existingAppIndexByUrlKey.get(urlKey);
+          if (config.apps[existingIndex] && config.apps[existingIndex].hidden) {
+            config.apps[existingIndex].hidden = false;
+            restoredCount += 1;
+          } else {
+            skippedCount += 1;
+          }
+          return;
+        }
+
+        existingAppIndexByUrlKey.set(urlKey, config.apps.length);
+        config.apps.push(appData);
+        addedCount += 1;
+      });
+
+      renderAppsList();
+      renderQuickAddOptions();
+
+      if (addedCount > 0 && restoredCount === 0 && skippedCount === 0) {
+        showStatus(`Added ${addedCount} app${addedCount === 1 ? '' : 's'} from ${sourceLabel}. Save Changes to keep them.`, 'success');
+        return;
+      }
+
+      if (addedCount > 0 || restoredCount > 0) {
+        const changeParts = [];
+        if (addedCount > 0) {
+          changeParts.push(`added ${addedCount} app${addedCount === 1 ? '' : 's'}`);
+        }
+        if (restoredCount > 0) {
+          changeParts.push(`restored ${restoredCount} hidden`);
+        }
+        if (skippedCount > 0) {
+          changeParts.push(`skipped ${skippedCount} already active`);
+        }
+
+        showStatus(`${changeParts.join(', ')} from ${sourceLabel}. Save Changes to keep updates.`, 'success');
+        return;
+      }
+
+      showStatus(`All apps from ${sourceLabel} are already in your list.`, 'info');
     }
 
     function resetAppForm() {
@@ -790,6 +1080,57 @@
           color: white;
         }
 
+        .quick-add-panel {
+          margin-top: 10px;
+          margin-bottom: 10px;
+          padding: 12px;
+          border: 1px solid ${colors.textSecondary};
+          border-radius: 8px;
+          background: ${colors.background};
+        }
+
+        .quick-add-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-bottom: 10px;
+        }
+
+        .quick-add-btn {
+          padding: 8px 14px;
+          border: 1px solid ${colors.textSecondary};
+          border-radius: 9999px;
+          background: ${colors.surface};
+          color: ${colors.text};
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .quick-add-btn:hover {
+          border-color: ${colors.primary};
+          color: ${colors.primary};
+        }
+
+        .quick-add-row {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .quick-add-row label {
+          color: ${colors.textSecondary};
+          white-space: nowrap;
+          margin-bottom: 0;
+        }
+
+        .quick-add-row select {
+          margin-bottom: 0;
+        }
+
+        .quick-add-row .save-btn {
+          margin-right: 0;
+        }
+
         .save-btn {
           background: ${colors.primary};
           color: white;
@@ -815,12 +1156,19 @@
           flex-grow: 1;
         }
 
+        .app-state {
+          display: inline-block;
+          margin-left: 8px;
+          font-size: 0.8em;
+          color: ${colors.textSecondary};
+        }
+
         .app-item-actions {
           display: flex;
           gap: 5px;
         }
 
-        .edit-btn, .delete-btn {
+        .edit-btn, .toggle-btn {
           padding: 4px 12px;
           border: none;
           border-radius: 9999px;
@@ -833,8 +1181,8 @@
           color: white;
         }
 
-        .delete-btn {
-          background: #ef4444;
+        .toggle-btn {
+          background: ${colors.primary};
           color: white;
         }
 
@@ -909,6 +1257,11 @@
           .color-picker {
             grid-template-columns: 1fr;
           }
+
+          .quick-add-row {
+            flex-direction: column;
+            align-items: stretch;
+          }
         }
       `;
 
@@ -919,7 +1272,7 @@
     function renderApps() {
       const mainContent = document.getElementById('main-content');
       const categories = {};
-      const apps = Array.isArray(config.apps) ? config.apps : [];
+      const apps = (Array.isArray(config.apps) ? config.apps : []).filter((app) => !app.hidden);
 
       apps.forEach(app => {
         if (!categories[app.category]) {
@@ -936,7 +1289,7 @@
 
         apps.forEach(app => {
         html += `
-        <div class="app-card" data-app-url="${escapeHtml(app.url)}">
+        <div class="app-card" data-app-url="${escapeHtml(app.url)}" data-app-name="${escapeHtml(app.name)}">
         ${app.icon.startsWith('http') ? `<img class="app-icon" src="${escapeHtml(app.icon)}" alt="${escapeHtml(app.name)} icon" />` : `<span class="app-icon">${escapeHtml(app.icon)}</span>`}
         <div class="app-name">${escapeHtml(app.name)}</div>
         <div class="app-description">${escapeHtml(app.description)}</div>
@@ -944,6 +1297,10 @@
     });
 
         html += `</div></section>`;
+      }
+
+      if (!html) {
+        html = '<section><h2 class="section-title">No active apps</h2><p class="app-description">Open Settings and use Quick Add or unhide modules.</p></section>';
       }
 
       mainContent.innerHTML = html;
@@ -965,13 +1322,13 @@
       }
 
       renderAppsList();
+      renderQuickAddOptions();
       setModalOpen('settings-modal', true);
     }
 
     function closeSettings() {
       config = JSON.parse(JSON.stringify(originalConfig)); // Reset changes
       closeAddAppModal();
-      pendingDeleteIndex = null;
       clearStatus();
       setModalOpen('settings-modal', false);
     }
@@ -982,18 +1339,15 @@
       const apps = Array.isArray(config.apps) ? config.apps : [];
 
       apps.forEach((app, index) => {
-        const isPendingDelete = pendingDeleteIndex === index;
         html += `
           <div class="app-item">
             <div class="app-item-info">
               <strong>${escapeHtml(app.name)}</strong> - ${escapeHtml(app.category)}
+              <span class="app-state">${app.hidden ? 'Hidden' : 'Active'}</span>
             </div>
             <div class="app-item-actions">
               <button class="edit-btn" type="button" data-action="edit" data-index="${index}">Edit</button>
-              ${isPendingDelete
-                ? `<button class="delete-btn" type="button" data-action="confirm-delete" data-index="${index}">Confirm</button>
-              <button class="cancel-btn" type="button" data-action="cancel-delete" data-index="${index}">Cancel</button>`
-                : `<button class="delete-btn" type="button" data-action="delete" data-index="${index}">Delete</button>`}
+              <button class="toggle-btn" type="button" data-action="toggle-hidden" data-index="${index}">${app.hidden ? 'Unhide' : 'Hide'}</button>
             </div>
           </div>`;
       });
@@ -1042,7 +1396,6 @@
     }
 
     function openAddAppModal() {
-    pendingDeleteIndex = null;
     renderAppsList();
     resetAppForm();
     clearStatus();
@@ -1065,10 +1418,13 @@
     }
 
     if (editingAppIndex === null) {
-      config.apps.push(appData);
+      config.apps.push({ ...appData, hidden: false });
       showStatus(`Added ${appData.name}. Save Changes to keep it.`, 'success');
     } else if (editingAppIndex >= 0 && editingAppIndex < config.apps.length) {
-      config.apps[editingAppIndex] = appData;
+      config.apps[editingAppIndex] = {
+        ...appData,
+        hidden: Boolean(config.apps[editingAppIndex].hidden)
+      };
       showStatus(`Updated ${appData.name}. Save Changes to keep it.`, 'success');
     } else {
       showStatus('Unable to save app. Reopen the app editor and try again.', 'error');
@@ -1076,48 +1432,24 @@
     }
 
     renderAppsList();
+    renderQuickAddOptions();
     closeAddAppModal();
    }
 
-    function deleteApp(index) {
+    function toggleAppHidden(index) {
      config = normalizeConfig(config);
 
      if (index < 0 || index >= config.apps.length) {
        return;
-     }
+      }
 
-     pendingDeleteIndex = index;
-     showStatus(`Confirm removal of ${config.apps[index].name}.`, 'info');
-     renderAppsList();
- }
-
-    function confirmDeleteApp(index) {
-     config = normalizeConfig(config);
-
-     if (index < 0 || index >= config.apps.length) {
-       pendingDeleteIndex = null;
-       showStatus('The selected app no longer exists.', 'error');
-       renderAppsList();
-       return;
-    }
-
-     const deletedAppName = config.apps[index].name;
-     config.apps.splice(index, 1);
-     if (editingAppIndex === index) {
-       closeAddAppModal();
-     } else if (editingAppIndex !== null && index < editingAppIndex) {
-       editingAppIndex -= 1;
-     }
-
-     pendingDeleteIndex = null;
-     showStatus(`Removed ${deletedAppName}. Save Changes to keep it.`, 'success');
-     renderAppsList();
- }
-
-    function cancelDeleteApp() {
-      pendingDeleteIndex = null;
-      clearStatus();
+     config.apps[index].hidden = !config.apps[index].hidden;
+     const appName = config.apps[index].name;
+     const nextState = config.apps[index].hidden ? 'hidden' : 'active';
+     showStatus(`${appName} is now ${nextState}. Save Changes to keep it.`, 'success');
       renderAppsList();
+      renderQuickAddOptions();
+      renderApps();
     }
 
     function editApp(index) {
@@ -1127,7 +1459,6 @@
         return;
       }
 
-      pendingDeleteIndex = null;
       editingAppIndex = index;
       document.getElementById('app-form-title').textContent = 'Edit App';
       document.getElementById('save-app').textContent = 'Save App';
@@ -1158,6 +1489,27 @@
     document.getElementById('save-settings').addEventListener('click', saveSettings);
     document.getElementById('cancel-settings').addEventListener('click', closeSettings);
     document.getElementById('add-app-btn').addEventListener('click', openAddAppModal);
+    document.getElementById('quick-add-core').addEventListener('click', () => {
+      const coreApps = GOOGLE_APP_LIBRARY.filter((app) => app.packs.includes('core'));
+      addAppsFromLibrary(coreApps, 'Core Pack');
+    });
+    document.getElementById('quick-add-collab').addEventListener('click', () => {
+      const collaborationApps = GOOGLE_APP_LIBRARY.filter((app) => app.packs.includes('collab'));
+      addAppsFromLibrary(collaborationApps, 'Collaboration Pack');
+    });
+    document.getElementById('quick-add-all').addEventListener('click', () => {
+      addAppsFromLibrary(GOOGLE_APP_LIBRARY, 'Full Google Pack');
+    });
+    document.getElementById('quick-add-selected').addEventListener('click', () => {
+      const selectedAppId = document.getElementById('quick-add-select').value;
+      const selectedApp = getLibraryAppById(selectedAppId);
+      if (!selectedApp) {
+        showStatus('Select a Google app from Quick Pick first.', 'info');
+        return;
+      }
+
+      addAppsFromLibrary([selectedApp], selectedApp.name);
+    });
     document.getElementById('cancel-app').addEventListener('click', closeAddAppModal);
     document.getElementById('app-category-select').addEventListener('change', function() {
       const newLabel = document.getElementById('app-category-new-label');
@@ -1189,12 +1541,8 @@
 
       if (actionButton.dataset.action === 'edit') {
         editApp(index);
-      } else if (actionButton.dataset.action === 'delete') {
-        deleteApp(index);
-      } else if (actionButton.dataset.action === 'confirm-delete') {
-        confirmDeleteApp(index);
-      } else if (actionButton.dataset.action === 'cancel-delete') {
-        cancelDeleteApp();
+      } else if (actionButton.dataset.action === 'toggle-hidden') {
+        toggleAppHidden(index);
       }
     });
     document.getElementById('main-content').addEventListener('click', function(event) {
@@ -1204,8 +1552,9 @@
       }
 
       const url = appCard.dataset.appUrl;
+      const appName = appCard.dataset.appName || '';
       if (url) {
-        openApp(url);
+        openApp(url, appName);
       }
     });
 
@@ -1216,8 +1565,29 @@
       }
     });
 
-    function openApp(url) {
-      window.electronAPI.openApp(url);
+    function openApp(url, appName) {
+      const themes = {
+        dark: { primary: '#60a5fa', background: '#1e293b', text: '#e2e8f0', surface: '#334155' },
+        light: { primary: '#3b82f6', background: '#f8fafc', text: '#1e293b', surface: '#ffffff' },
+        ocean: { primary: '#22d3ee', background: '#0c4a6e', text: '#cffafe', surface: '#164e63' },
+        sunset: { primary: '#fb923c', background: '#431407', text: '#fed7aa', surface: '#7c2d12' },
+        forest: { primary: '#4ade80', background: '#14532d', text: '#dcfce7', surface: '#166534' },
+        neon: { primary: '#f0abfc', background: '#0a0a0a', text: '#f5f5f5', surface: '#1a1a2e' },
+        rose: { primary: '#fb7185', background: '#4c0519', text: '#ffe4e6', surface: '#881337' },
+        midnight: { primary: '#818cf8', background: '#0f0f23', text: '#e0e7ff', surface: '#1a1a3e' },
+        cyberpunk: { primary: '#facc15', background: '#0a0a0a', text: '#fef08a', surface: '#1c1917' },
+        retro: { primary: '#4ade80', background: '#0a0a0a', text: '#4ade80', surface: '#111111' },
+        nord: { primary: '#88c0d0', background: '#2e3440', text: '#eceff4', surface: '#3b4252' },
+        dracula: { primary: '#bd93f9', background: '#282a36', text: '#f8f8f2', surface: '#44475a' },
+        solarized: { primary: '#268bd2', background: '#002b36', text: '#839496', surface: '#073642' },
+        glass: { primary: '#93c5fd', background: '#1e293b', text: '#e2e8f0', surface: 'rgba(51,65,85,0.6)' },
+        lavender: { primary: '#c4b5fd', background: '#2e1065', text: '#ede9fe', surface: '#3b0764' },
+        coffee: { primary: '#d97706', background: '#292018', text: '#fde68a', surface: '#3b2a1a' },
+        arctic: { primary: '#e0f2fe', background: '#0c4a6e', text: '#f0f9ff', surface: '#075985' },
+        custom: config.customColors
+      };
+      const colors = themes[config.theme] || themes.dark;
+      window.electronAPI.openApp(url, appName, colors);
     }
   </script>
 </body>

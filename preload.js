@@ -1,7 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  openApp: (url) => ipcRenderer.send('open-app', url),
+  openApp: (url, appName, colors) => ipcRenderer.send('open-app', url, appName, colors),
   getConfig: () => ipcRenderer.invoke('get-config'),
   saveConfig: (config) => ipcRenderer.invoke('save-config', config),
   minimizeWindow: () => ipcRenderer.send('minimize-window'),
